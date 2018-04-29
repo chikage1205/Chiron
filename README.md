@@ -1,8 +1,8 @@
 # Chiron
 Android用アプリケーションです (対応機種: __Android 5.0以降__)  
-まだα版の段階ですが今年中にはβ版、正式版として公開したいと思っています。
+2018/4/29に正式版を公開しました
 
-[ここから](https://www.dropbox.com/s/2f3w3x7slyn5fd9/Chiron.apk?dl=1)最新ver.をダウンロードできます。  
+[ここ](https://www.dropbox.com/s/cdwpia0i9yks2f6/Chiron.apk?dl=1)から最新ver.をダウンロードできます。  
 ※注意！ __リンクをクリックするとすぐにダウンロードが始まります。__  
 
 
