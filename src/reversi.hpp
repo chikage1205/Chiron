@@ -10,6 +10,7 @@ struct Board {
     uint64_t bBoard;
     uint64_t wBoard;
     uint64_t coordinate;
+    int_fast16_t value;
     bool isBlack;
 };
 
@@ -22,11 +23,11 @@ public:
 
     void redo();
 
-    int_fast8_t getIndex(uint64_t num);
-
     int_fast8_t getStones(uint64_t board) const;
 
-    int_fast16_t alphabeta(uint64_t b, uint64_t w, bool isB, int depth, int_fast16_t alpha, int_fast16_t beta, bool isRoot);
+    int_fast16_t alphabeta(uint64_t b, uint64_t w, bool isB, int depth, int_fast16_t alpha, int_fast16_t beta, bool passed, bool isRoot);
+
+    int_fast16_t solve(uint64_t b, uint64_t w, bool isB, int_fast16_t alpha, int_fast16_t beta, bool passed, bool isRoot);
 
     int_fast16_t evaluate(uint64_t b, uint64_t w) const;
 
@@ -52,14 +53,16 @@ public:
 
     bool getIsBlack() const;
 
-    int32_t getNode();
+    int32_t getNode() const;
 
-    int32_t getEmpty();
+    int32_t getEmpty() const;
+
+    int8_t getTurn() const;
 
 private:
     uint64_t bBoard;
     uint64_t wBoard;
-    int_fast8_t turn;
+    int8_t turn;
     bool isBlack;
     int_fast32_t node;
     int_fast32_t evalTable[64] = {45, -11, 4, -1, -1, 4, -11, 45, -11, -16, -1, -3, -3, 2, -16, -11, 4, -1, 2, -1, -1, 2, -1, 4, -1, -3, -1, 0, 0, -1, -3, -1, -1, -3, -1, 0, 0, -1, -3, -1, 4, -1, 2, -1, -1, 2, -1, 4, -11, -16, -1, -3, -3, 2, -16, -11, 45, -11, 4, -1, -1, 4, -11, 45};

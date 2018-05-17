@@ -5,6 +5,7 @@
 #include "reversi.hpp"
 #include <stdint.h>
 #include <algorithm>
+#include <android/log.h>
 
 void Reversi::init(uint64_t b, uint64_t w) {
     //ハンデとかで盤面いじる用, 別画面から帰ってきたとき用
@@ -67,7 +68,7 @@ int_fast8_t Reversi::getStones(uint64_t board) const {
     return static_cast<int_fast8_t>(result);
 }
 
-int_fast16_t Reversi::alphabeta(uint64_t b, uint64_t w, bool isB, int depth, int_fast16_t alpha, int_fast16_t beta, bool isRoot) {
+/*int_fast16_t Reversi::alphabeta(uint64_t b, uint64_t w, bool isB, int depth, int_fast16_t alpha, int_fast16_t beta, bool isRoot) {
     node++;
 
     uint64_t myMobility = getMobility(b, w, isB);
@@ -117,7 +118,7 @@ int_fast16_t Reversi::alphabeta(uint64_t b, uint64_t w, bool isB, int depth, int
             if (child > value) {
                 value = child;
                 min = child;
-                bestCoord = getIndex(board.coordinate);
+                bestCoord = getStones(board.coordinate - 1);
             }
             if ((value > max) || (!isRoot && value == max)) {
                 return value;
@@ -126,7 +127,193 @@ int_fast16_t Reversi::alphabeta(uint64_t b, uint64_t w, bool isB, int depth, int
             if (child < value) {
                 value = child;
                 max = child;
-                bestCoord = getIndex(board.coordinate);
+                bestCoord = getStones(board.coordinate - 1);
+            }
+            if ((value < min) || (!isRoot && value == min)) {
+                return value;
+            }
+        }
+    }
+    if (isRoot) {
+        return bestCoord;
+    } else {
+        return value;
+    }
+}*/
+int_fast16_t Reversi::alphabeta(uint64_t b, uint64_t w, bool isB, int depth, int_fast16_t alpha, int_fast16_t beta, bool passed, bool isRoot) {
+    node++;
+
+    uint64_t mobility = getMobility(b, w, isB);
+
+    if (mobility == 0) {
+        if (passed){
+            return getStones(b) - getStones(w);
+        }else{
+            return alphabeta(b, w, !isB, depth, alpha, beta, true, false);
+        }
+    }
+
+    if (depth == 0) { //リーフなら
+        return evaluate(b, w); //評価関数返す
+    }
+
+    int_fast16_t value = isB ? -9999 : 9999;
+    int_fast16_t min = alpha;
+    int_fast16_t max = beta;
+    int_fast8_t bestCoord = 0;
+
+    for (uint64_t coord  = mobility & -mobility; mobility != 0; mobility ^= coord, coord = mobility & -mobility) {
+        uint64_t flip = getFlip(coord, b, w, isB);
+        uint64_t bTemp;
+        uint64_t wTemp;
+        if (isB) {
+            bTemp = (b ^ flip) | coord;
+            wTemp = w ^ flip;
+        } else {
+            bTemp = b ^ flip;
+            wTemp = (w ^ flip) | coord;
+        }
+        int_fast16_t child = alphabeta(bTemp, wTemp, !isB, depth - 1, min, max, false, false);
+        if (isB) {
+            if (child > value) {
+                value = child;
+                min = child;
+                bestCoord = getStones(coord - 1);
+            }
+            if ((value > max) || (!isRoot && value == max)) {
+                return value;
+            }
+        } else {
+            if (child < value) {
+                value = child;
+                max = child;
+                bestCoord = getStones(coord - 1);
+            }
+            if ((value < min) || (!isRoot && value == min)) {
+                return value;
+            }
+        }
+    }
+    if (isRoot) {
+        return bestCoord;
+    } else {
+        return value;
+    }
+}
+
+
+/*int_fast16_t Reversi::solve(uint64_t b, uint64_t w, bool isB, int_fast16_t alpha, int_fast16_t beta, bool isRoot) {
+    node++;
+
+    uint64_t myMobility = getMobility(b, w, isB);
+    uint64_t oppMobility = getMobility(b, w, isB);
+
+    if (myMobility == 0 && oppMobility == 0) { //ゲーム終了なら
+        return (getStones(b) - getStones(w)) * 100; //石差にバフかけて返す
+    }
+
+    int_fast16_t value = isB ? -9999 : 9999;
+    int_fast16_t min = alpha;
+    int_fast16_t max = beta;
+    uint64_t bTemp;
+    uint64_t wTemp;
+
+    int_fast8_t mobility = getStones(myMobility);
+    Board nextBoard[mobility];
+
+    for (Board &board: nextBoard) {
+        uint64_t coord = myMobility & -myMobility;
+        myMobility &= myMobility - 1;
+        uint64_t rev = getFlip(coord, b, w, isB);
+        if (isB) {
+            bTemp = (b ^ rev) | coord;
+            wTemp = w ^ rev;
+        } else {
+            bTemp = b ^ rev;
+            wTemp = (w ^ rev) | coord;
+        }
+        board.bBoard = bTemp;
+        board.wBoard = wTemp;
+        board.coordinate = coord;
+    }
+
+    int_fast8_t bestCoord = 0;
+    for (Board board: nextBoard) {
+        bTemp = board.bBoard;
+        wTemp = board.wBoard;
+        int_fast16_t child = (getMobility(bTemp, wTemp, !isB) != 0) ?
+                             solve(bTemp, wTemp, !isB, min, max, false) :
+                             solve(bTemp, wTemp, isB, min, max, false);
+        if (isB) {
+            if (child > value) {
+                value = child;
+                min = child;
+                bestCoord = getStones(board.coordinate - 1);
+            }
+            if ((value > max) || (!isRoot && value == max)) {
+                return value;
+            }
+        } else {
+            if (child < value) {
+                value = child;
+                max = child;
+                bestCoord = getStones(board.coordinate - 1);
+            }
+            if ((value < min) || (!isRoot && value == min)) {
+                return value;
+            }
+        }
+    }
+    if (isRoot) {
+        return bestCoord;
+    } else {
+        return value;
+    }
+}*/
+int_fast16_t Reversi::solve(uint64_t b, uint64_t w, bool isB, int_fast16_t alpha, int_fast16_t beta, bool passed, bool isRoot) {
+    node++;
+
+    uint64_t mobility = getMobility(b, w, isB);
+
+    if (mobility == 0) {
+        if (passed){
+            return getStones(b) - getStones(w);
+        }else{
+            return solve(b, w, !isB, alpha, beta, true, false);
+        }
+    }
+
+    int_fast16_t value = isB ? -9999 : 9999;
+    int_fast16_t min = alpha;
+    int_fast16_t max = beta;
+    int_fast8_t bestCoord = 0;
+
+    for (uint64_t coord  = mobility & -mobility; mobility; mobility ^= coord, coord = mobility & -mobility) {
+        uint64_t flip = getFlip(coord, b, w, isB);
+        uint64_t bTemp;
+        uint64_t wTemp;
+        if (isB) {
+            bTemp = (b ^ flip) | coord;
+            wTemp = w ^ flip;
+        } else {
+            bTemp = b ^ flip;
+            wTemp = (w ^ flip) | coord;
+        }
+        int_fast16_t child = solve(bTemp, wTemp, !isB, min, max, false, false);
+        if (isB) {
+            if (child > value) {
+                value = child;
+                min = child;
+                bestCoord = getStones(coord - 1);
+            }
+            if ((value > max) || (!isRoot && value == max)) {
+                return value;
+            }
+        } else {
+            if (child < value) {
+                value = child;
+                max = child;
+                bestCoord = getStones(coord - 1);
             }
             if ((value < min) || (!isRoot && value == min)) {
                 return value;
@@ -151,6 +338,7 @@ int_fast16_t Reversi::evaluate(uint64_t b, uint64_t w) const {
             bp -= evalTable[i];
         }
     }
+    //return bp + fs * 18 + cn * 3;
     return bp + fs * 11 + cn * 2;
 }
 
@@ -369,47 +557,73 @@ void Reversi::setStoneToBoard(uint64_t coord, uint64_t rev, bool isB) {
 }
 
 uint64_t Reversi::getConfirmedStones(uint64_t me, uint64_t opp) const {
-    uint64_t edge = 0x8100000000000081;
-    //uint64_t side = 0xff818181818181ff;
-    uint64_t cs;
-    cs = me & edge;
+    uint64_t cs = me & 0x8100000000000081;
+    uint64_t top = 0xFF;
+    uint64_t bottom = 0xFF00000000000000;
+    uint64_t right = 0x8080808080808080;
+    uint64_t left = 0x101010101010101;
+    uint64_t empty = ~(me | opp);
+    if ((empty & top) == 0) { cs |= me & top; }
+    if ((empty & bottom) == 0) { cs |= me & bottom; }
+    if ((empty & right) == 0) { cs |= me & right; }
+    if ((empty & left) == 0) { cs |= me & left; }
     if (cs != 0) {
         uint64_t upmask = 0x8100000000000000 & cs;
         uint64_t downmask = 0x81 & cs;
         uint64_t rightmask = 0x100000000000001 & cs;
         uint64_t leftmask = 0x8000000000000080 & cs;
 
-        cs |= (upmask >>= 8) & me;
-        cs |= (upmask >>= 8) & me;
-        cs |= (upmask >>= 8) & me;
-        cs |= (upmask >>= 8) & me;
-        cs |= (upmask >>= 8) & me;
-        cs |= (upmask >>= 8) & me;
-        cs |= (upmask >> 8) & me;
+        upmask = upmask >> 8 & me;
+        cs |= upmask;
+        upmask = upmask >> 8 & me;
+        cs |= upmask;
+        upmask = upmask >> 8 & me;
+        cs |= upmask;
+        upmask = upmask >> 8 & me;
+        cs |= upmask;
+        upmask = upmask >> 8 & me;
+        cs |= upmask;
+        upmask = upmask >> 8 & me;
+        cs |= upmask;
 
-        cs |= (downmask <<= 8) & me;
-        cs |= (downmask <<= 8) & me;
-        cs |= (downmask <<= 8) & me;
-        cs |= (downmask <<= 8) & me;
-        cs |= (downmask <<= 8) & me;
-        cs |= (downmask <<= 8) & me;
-        cs |= (downmask << 8) & me;
+        downmask = downmask << 8 & me;
+        cs |= downmask;
+        downmask = downmask << 8 & me;
+        cs |= downmask;
+        downmask = downmask << 8 & me;
+        cs |= downmask;
+        downmask = downmask << 8 & me;
+        cs |= downmask;
+        downmask = downmask << 8 & me;
+        cs |= downmask;
+        downmask = downmask << 8 & me;
+        cs |= downmask;
 
-        cs |= (rightmask <<= 1) & me;
-        cs |= (rightmask <<= 1) & me;
-        cs |= (rightmask <<= 1) & me;
-        cs |= (rightmask <<= 1) & me;
-        cs |= (rightmask <<= 1) & me;
-        cs |= (rightmask <<= 1) & me;
-        cs |= (rightmask << 1) & me;
+        rightmask = rightmask << 1 & me;
+        cs |= rightmask;
+        rightmask = rightmask << 1 & me;
+        cs |= rightmask;
+        rightmask = rightmask << 1 & me;
+        cs |= rightmask;
+        rightmask = rightmask << 1 & me;
+        cs |= rightmask;
+        rightmask = rightmask << 1 & me;
+        cs |= rightmask;
+        rightmask = rightmask << 1 & me;
+        cs |= rightmask;
 
-        cs |= (leftmask >>= 1) & me;
-        cs |= (leftmask >>= 1) & me;
-        cs |= (leftmask >>= 1) & me;
-        cs |= (leftmask >>= 1) & me;
-        cs |= (leftmask >>= 1) & me;
-        cs |= (leftmask >>= 1) & me;
-        cs |= (leftmask >> 1) & me;
+        leftmask = leftmask >> 1 & me;
+        cs |= leftmask;
+        leftmask = leftmask >> 1 & me;
+        cs |= leftmask;
+        leftmask = leftmask >> 1 & me;
+        cs |= leftmask;
+        leftmask = leftmask >> 1 & me;
+        cs |= leftmask;
+        leftmask = leftmask >> 1 & me;
+        cs |= leftmask;
+        leftmask = leftmask >> 1 & me;
+        cs |= leftmask;
     }
     return cs;
 }
@@ -426,42 +640,20 @@ bool Reversi::getIsBlack() const {
     return isBlack;
 }
 
-int_fast8_t Reversi::getIndex(uint64_t num) {
-    int_fast8_t pos = 0;
-    if (num >= ((uint64_t) 1 << 32)) {
-        num >>= 32;
-        pos += 32;
-    }
-    if (num >= (1 << 16)) {
-        num >>= 16;
-        pos += 16;
-    }
-    if (num >= (1 << 8)) {
-        num >>= 8;
-        pos += 8;
-    }
-    if (num >= (1 << 4)) {
-        num >>= 4;
-        pos += 4;
-    }
-    if (num >= (1 << 2)) {
-        num >>= 2;
-        pos += 2;
-    }
-    if (num >= (1 << 1)) { pos += 1; }
-    return pos;
-}
-
-int32_t Reversi::getNode() {
+int32_t Reversi::getNode() const {
     return static_cast<int32_t>(node);
 }
 
-int32_t Reversi::getEmpty() {
+int32_t Reversi::getEmpty() const {
     return getStones(~(bBoard | wBoard));
 }
 
 uint64_t Reversi::getLastHand() const {
     return record[turn].coordinate;
+}
+
+int8_t Reversi::getTurn() const {
+    return turn;
 }
 
 /*void Reversi::setRecord(std::string record) {
@@ -481,10 +673,11 @@ std::string Reversi::getCoordString(uint64_t coord, bool isB) {
     std::string coordTable[8] = {"a", "b", "c", "d", "e", "f", "g", "h"};
     std::string coordTable2[8] = {"A", "B", "C", "D", "E", "F", "G", "H"};
 
-    int_fast8_t ind = getIndex(coord);
+    int_fast8_t ind = getStones(coord - 1);
     if (isB) {
         return coordTable[ind % 8] + std::to_string(ind / 8 + 1);
     } else {
         return coordTable2[ind % 8] + std::to_string(ind / 8 + 1);
     }
 }
+
